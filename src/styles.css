@@ -1,0 +1,14 @@
+* {
+    text-align: center;
+}
+
+img {
+    height: 75px;
+    margin: 5px -5px 0 -5px;
+}
+
+#dealer img:first-child {
+    filter: brightness(0);
+    position: relative;
+    z-index: -1;
+}
