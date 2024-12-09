@@ -1,138 +1,165 @@
-Array.prototype.random = function () {
-    return this[Math.floor((Math.random() * this.length))];
+Array.prototype.random = function() {
+	return this[Math.floor(Math.random() * this.length)];
+};
+
+function score(arr) {
+	return arr.reduce((sum, el) => el.hidden ? sum : sum + el.value, 0);
 }
 
-function sumArray(arr) {
-    return arr.reduce((a, b) => a + b, 0);
+function addCardToHand(scoreArray, handElement, hidden = false) {
+    const idx = Math.floor(Math.random() * cards.length);
+    const card = cards.splice(idx, 1)[0];
+    const value = getCardValue(card, score(scoreArray));
+
+    scoreArray.push({ card: card, value: value, hidden: hidden });
+	adjustAces(scoreArray);
+	
+    displayCard(card, handElement, hidden);
+    updateScoreDisplay();
 }
 
-function giveCard(arr) {
-    let idx = Math.floor(Math.random() * cards.length);
-    arr.push(cards[idx]);
-    cards.splice(idx, 1);
+function getCardValue(card, currentScore) {
+	const rank = card[0];
+	if (rank === "a") return currentScore <= 10 ? 11 : 1;
+	if (["1", "j", "q", "k"].includes(rank)) return 10;
+	return parseInt(rank);
 }
 
-function updateScore(arr, scr, card, html) {
-    let add;
-    switch(arr[card][0]) {
-        case "1": case "j": case "q": case "k": add = 10; break;
-        case "a": sumArray(scr) <= 10 ? add = 11 : add = 1; break;
-        default: add = parseInt(arr[card]);
+function adjustAces(scoreArray) {
+    while (score(scoreArray) > 21) {
+        const ace = scoreArray.find(card => card.value === 11);
+        if (ace) ace.value = 1;
+        else break;
     }
-    scr.push(add);
-    let img = document.createElement("img");
-    img.src = `./img/${arr[card]}.png`;
-    html.appendChild(img);
 }
 
-function recharge() {
-    sessionStorage.setItem("balance", document.getElementById("recharge").value);
-    balance.innerHTML = parseInt(sessionStorage.getItem("balance"));
+function displayCard(card, handElement, hidden) {
+    const img = document.createElement("img");
+    if (hidden) {
+        img.src = './img/back.png';
+        img.classList.add("card");
+    } else {
+        img.src = `./img/${card}.png`;
+        img.classList.add("card");
+    }
+    handElement.appendChild(img);
 }
 
-const buttons = document.getElementsByTagName("button");
-const player = document.getElementById("player");
-const dealer = document.getElementById("dealer");
-const hit = document.getElementById("hit");
-const stand = document.getElementById("stand");
-const result = document.getElementById("result");
 
+function updateScoreDisplay() {
+	document.getElementById("dealerScore").innerText = score(dealerHand);
+	document.getElementById("playerScore").innerText = score(playerHand);
+}
+
+const balanceElem = document.getElementById("balance");
+const playerElem = document.getElementById("player");
+const dealerElem = document.getElementById("dealer");
+const hitBtn = document.getElementById("hit");
+const standBtn = document.getElementById("stand");
+const restartBtn = document.getElementById("restart");
+const resultElem = document.getElementById("result");
+const controlDiv = document.getElementById("control");
+
+let balance = parseInt(sessionStorage.getItem("balance")) || 5000;
+balanceElem.innerHTML = `$${balance}`;
+let betAmount, playerHand = [], dealerHand = [];
+let dealerHasBlackjack = false;
 const cards = [
-    "2h", "3h", "4h", "5h", "6h", "7h", "8h", "9h", "1h", "jh", "qh", "kh", "ah",
-    "2d", "3d", "4d", "5d", "6d", "7d", "8d", "9d", "1d", "jd", "qd", "kd", "ad",
-    "2c", "3c", "4c", "5c", "6c", "7c", "8c", "9c", "1c", "jc", "qc", "kc", "ac",
-    "2s", "3s", "4s", "5s", "6s", "7s", "8s", "9s", "1s", "js", "qs", "ks", "as"
+	"2h", "3h", "4h", "5h", "6h", "7h", "8h", "9h", "1h", "jh", "qh", "kh", "ah",
+	"2d", "3d", "4d", "5d", "6d", "7d", "8d", "9d", "1d", "jd", "qd", "kd", "ad",
+	"2c", "3c", "4c", "5c", "6c", "7c", "8c", "9c", "1c", "jc", "qc", "kc", "ac",
+	"2s", "3s", "4s", "5s", "6s", "7s", "8s", "9s", "1s", "js", "qs", "ks", "as"
 ];
 
-let betAmount;
+function initializeGame() {
+	restartBtn.style.display = 'none';
 
-let playerCards = [];
-let dealerCards = [];
+	do {
+		betAmount = parseInt(prompt(`Place a bet. Balance: ${balance}`));
+	} while (isNaN(betAmount) || betAmount <= 0 || betAmount > balance);
 
-let playerScore = [];
-let dealerScore = [];
+	balance -= betAmount;
+	sessionStorage.setItem("balance", balance);
+	balanceElem.innerHTML = `$${balance}`;
 
-let balanceAmount = parseInt(sessionStorage.getItem("balance"))
+	playerHand = [];
+	dealerHand = [];
+	playerElem.innerHTML = '';
+	dealerElem.innerHTML = '';
+	resultElem.innerHTML = '';
 
-if(!balanceAmount || balanceAmount <= 0) {
-    balanceAmount = 5000;
-    sessionStorage.setItem("balance", balanceAmount);
+	addCardToHand(playerHand, playerElem);
+	addCardToHand(playerHand, playerElem);
+	addCardToHand(dealerHand, dealerElem, true);
+	addCardToHand(dealerHand, dealerElem);
+
+	if (score(playerHand) === 21) endGame("win", betAmount * 2);
+	else {
+		hitBtn.style.display = 'inline-block';
+		standBtn.style.display = 'inline-block';
+	}
 }
 
-while(true) {
-    betAmount = parseInt(prompt("place a bet. balance: " + balanceAmount));
-    if(betAmount > 0 && betAmount <= balanceAmount) break;
+function playerTurn() {
+	addCardToHand(playerHand, playerElem);
+	if (score(playerHand) >= 21) checkWinner();
 }
 
-balanceAmount -= betAmount;
-sessionStorage.setItem("balance", balanceAmount);
+function dealerTurn() {
 
-giveCard(playerCards);
-giveCard(playerCards);
-giveCard(dealerCards);
-giveCard(dealerCards);
+	hitBtn.style.display = 'none';
+	standBtn.style.display = 'none';
+    
+    dealerElem.children[0].src = `./img/${dealerHand[0].card}.png`;
+    dealerHand[0].hidden = false;
+    updateScoreDisplay();
 
-for(let i = 0; i < playerCards.length; i++) updateScore(playerCards, playerScore, i, player);
-for(let i = 0; i < dealerCards.length; i++) updateScore(dealerCards, dealerScore, i, dealer);
-
-if(sumArray(playerScore) == 21 && sumArray(dealerScore) == 21) {
-    for(let i = 0; i < buttons.length; i++) buttons[i].disabled = true;
-    dealer.firstChild.style.filter = "brightness(1)";
-    sessionStorage.setItem("balance", balanceAmount + betAmount);
-    result.innerHTML = "you drew with getting 21";
-    setInterval(function() { location.reload(); }, 5000);
-} else if(sumArray(playerScore) == 21) {
-    for(let i = 0; i < buttons.length; i++) buttons[i].disabled = true;
-    dealer.firstChild.style.filter = "brightness(1)";
-    sessionStorage.setItem("balance", balanceAmount + betAmount * 2.5);
-    result.innerHTML = `you won ${betAmount} with getting 21 first`;
-    setInterval(function() { location.reload(); }, 5000);
-} else if(sumArray(dealerScore) == 21) {
-    for(let i = 0; i < buttons.length; i++) buttons[i].disabled = true;
-    dealer.firstChild.style.filter = "brightness(1)";
-    result.innerHTML = `you lost ${betAmount} with dealer getting 21 first`;
-    setInterval(function() { location.reload(); }, 5000);
+	if(score(dealerHand) >= score(playerHand)) checkWinner()
+	else {
+		function drawDealerCard() {
+			if(score(dealerHand) >= score(playerHand)) checkWinner();
+			else {
+				addCardToHand(dealerHand, dealerElem);
+				if(score(dealerHand) >= score(playerHand)) checkWinner();
+				else setTimeout(drawDealerCard, 1000);
+			}
+		}
+	
+		setTimeout(drawDealerCard, 1000);
+	}
 }
 
-function actHit() {
-    giveCard(playerCards);
-    updateScore(playerCards, playerScore, playerCards.length - 1, player);
-
-    if(sumArray(playerScore) > 21) {
-        for(let i = 0; i < buttons.length; i++) buttons[i].disabled = true;
-        dealer.firstChild.style.filter = "brightness(1)";
-        result.innerHTML = `you lost ${betAmount} with ${sumArray(playerScore)} versus dealer's ${sumArray(dealerScore)}`;				
-        setInterval(function() { location.reload(); }, 2500);
-    } else if(sumArray(playerScore) == 21) {
-        for(let i = 0; i < buttons.length; i++) buttons[i].disabled = true;
-        dealer.firstChild.style.filter = "brightness(1)";
-        sessionStorage.setItem("balance", balanceAmount + betAmount * 2);
-        result.innerHTML = `you won ${betAmount} with ${sumArray(playerScore)} versus dealer's ${sumArray(dealerScore)}`;				
-        setInterval(function() { location.reload(); }, 2500);
-    }
+function checkWinner() {
+    const playerSum = score(playerHand);
+    const dealerSum = score(dealerHand);
+    if (playerSum > 21) endGame("lose", 0);
+	else if (dealerSum > 21) endGame("win", betAmount * 2);
+    else if (playerSum > dealerSum) endGame("win", betAmount * 2);
+    else if (playerSum < dealerSum) endGame("lose", 0);
+    else if (playerSum === dealerSum) endGame("draw", betAmount);
 }
 
-function actStand() {
-    dealer.firstChild.style.filter = "brightness(1)";
+function endGame(result, payout) {
+	hitBtn.style.display = 'none';
+	standBtn.style.display = 'none';
 
-    while(sumArray(dealerScore) < sumArray(playerScore) && sumArray(playerScore) < 21) {
-        giveCard(dealerCards);
-        updateScore(dealerCards, dealerScore, dealerCards.length - 1, dealer);
-    }
+	balance += payout;
+	if(balance <= 0) balance = 5000;
+	sessionStorage.setItem("balance", balance);
+	balanceElem.innerHTML = `$${balance}`;
 
-    if(sumArray(dealerScore) <= 21 && sumArray(dealerScore) > sumArray(playerScore)) {
-        for(let i = 0; i < buttons.length; i++) buttons[i].disabled = true;
-        result.innerHTML = `you lost ${betAmount} with ${sumArray(playerScore)} versus dealer's ${sumArray(dealerScore)}`;
-        setInterval(function() { location.reload(); }, 5000);
-    } else if(sumArray(dealerScore) > 21 || sumArray(dealerScore) < sumArray(playerScore)) {
-        for(let i = 0; i < buttons.length; i++) buttons[i].disabled = true;
-        sessionStorage.setItem("balance", balanceAmount + betAmount * 2);
-        result.innerHTML = `you won ${betAmount} with ${sumArray(playerScore)} versus dealer's ${sumArray(dealerScore)}`;
-        setInterval(function() { location.reload(); }, 5000);
-    } else {				
-        for(let i = 0; i < buttons.length; i++) buttons[i].disabled = true;
-        sessionStorage.setItem("balance", balanceAmount + betAmount);
-        result.innerHTML = `you drew with ${sumArray(playerScore)} versus dealer's ${sumArray(dealerScore)}`;
-        setInterval(function() { location.reload(); }, 5000);
-    }
+	if (result === "win") {
+		resultElem.style.color = '#34eb34';
+		resultElem.innerHTML = `You won $${payout - betAmount}!`;
+	} else if (result === "draw") {
+		resultElem.style.color = '#ebebeb';
+		resultElem.innerHTML = "It's a draw!";
+	} else {
+		resultElem.style.color = '#eb4034';
+		resultElem.innerHTML = `You lost $${betAmount}!`;
+	}
+
+	restartBtn.style.display = 'inline-block';
 }
+
+initializeGame();

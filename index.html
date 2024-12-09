@@ -7,11 +7,25 @@
 	<title>blackjack</title>
 </head>
 <body>
-    <span id="result"></span><hr>
-	player:<div id="player"></div>
-	dealer:<div id="dealer"></div><hr>
-	<button id="hit" onclick="actHit()">hit</button>
-	<button id="stand" onclick="actStand()">stand</button>
+	<p id="balance"></p>
+
+	<div class="desk">
+
+		<p id="dealerScore">Dealer</p>
+		<div id="dealer"></div>
+
+		<p id="playerScore">Player</p>
+		<div id="player"></div>
+
+	</div>
+
+	<p id="result"></p>	
+
+	<div id="control">
+		<button id="hit" onclick="playerTurn()">Hit</button>
+		<button id="stand" onclick="dealerTurn()">Stand</button>
+		<button id="restart" onclick="initializeGame()">Restart Game</button>
+	</div>
 
 	<script src="src/script.js" defer></script>
 </body>
