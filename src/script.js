@@ -47,8 +47,8 @@ function displayCard(card, handElement, hidden) {
 
 
 function updateScoreDisplay() {
-	document.getElementById("dealerScore").innerText = score(dealerHand);
-	document.getElementById("playerScore").innerText = score(playerHand);
+	document.getElementById("dealerScore").innerText = `Dealer: ${score(dealerHand)}`;
+	document.getElementById("playerScore").innerText = `Player: ${score(playerHand)}`;
 }
 
 const balanceElem = document.getElementById("balance");
